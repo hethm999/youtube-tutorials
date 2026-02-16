@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Whale Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #09090b; --bg-card: #131316; --bg-card-hover: #1a1a1f;
+      --border: #23232a; --border-hover: #33333d;
+      --text: #fafafa; --text-sec: #a1a1aa; --text-muted: #63636e;
+      --accent: #06b6d4; --accent-dim: rgba(6,182,212,0.1);
+      --green: #22c55e; --green-dim: rgba(34,197,94,0.1);
+      --red: #ef4444; --red-dim: rgba(239,68,68,0.1);
+      --purple: #a78bfa; --orange: #fb923c; --blue: #3b82f6;
+      --radius: 14px; --radius-sm: 8px;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; overflow-x: hidden;
+    }
+
+    body::before {
+      content: ''; display: block; height: 3px;
+      background: linear-gradient(90deg, #06b6d4, #a78bfa, #f43f5e, #fb923c);
+    }
+
+    /* === HEADER === */
+    .header {
+      display: flex; align-items: center; gap: 16px;
+      padding: 16px 24px; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; background: rgba(9,9,11,0.85);
+      backdrop-filter: blur(16px); z-index: 100; justify-content: center;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .logo span { font-size: 22px; }
+    .logo h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+    .search-wrap { max-width: 600px; width: 100%; display: flex; gap: 8px; }
+    .search-wrap input {
+      flex: 1; padding: 10px 16px; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text); font-family: 'JetBrains Mono', monospace;
+      font-size: 13px; outline: none; transition: border-color 0.2s;
+    }
+    .search-wrap input:focus { border-color: var(--accent); }
+    .search-wrap input::placeholder { color: var(--text-muted); font-family: 'Inter', sans-serif; }
+    .btn {
+      padding: 10px 20px; background: var(--accent); color: #000; border: none;
+      border-radius: var(--radius-sm); font-weight: 600; font-size: 13px;
+      cursor: pointer; transition: opacity 0.2s; white-space: nowrap;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* === HERO === */
+    .hero {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 100px 24px 80px; text-align: center;
+    }
+    .hero h2 { font-size: 42px; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 12px; }
+    .hero h2 em {
+      font-style: normal;
+      background: linear-gradient(135deg, #06b6d4, #a78bfa);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero p { color: var(--text-sec); font-size: 16px; max-width: 480px; margin-bottom: 36px; line-height: 1.6; }
+    .quick-whales { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    .whale-btn {
+      padding: 10px 20px; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 24px; color: var(--text-sec); font-size: 13px; cursor: pointer;
+      transition: all 0.2s; font-family: 'Inter', sans-serif; font-weight: 500;
+    }
+    .whale-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    /* === DASHBOARD === */
+    .dashboard { padding: 24px; max-width: 1400px; margin: 0 auto; display: none; }
+    .dashboard.active { display: block; }
+
+    /* Identity */
+    .identity {
+      display: flex; align-items: center; gap: 16px; padding: 20px 24px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); margin-bottom: 20px;
+      animation: fadeIn 0.3s ease forwards;
+    }
+    .identity-avatar {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: linear-gradient(135deg, #06b6d4, #a78bfa);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0; font-weight: 700;
+    }
+    .identity-info { flex: 1; min-width: 0; }
+    .identity-name { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+    .identity-addr {
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: var(--text-muted); margin-top: 2px; cursor: pointer;
+      transition: color 0.2s;
+    }
+    .identity-addr:hover { color: var(--accent); }
+    .chain-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .chain-badge {
+      padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.3px;
+    }
+
+    /* Stats */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+    .stat-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px; transition: border-color 0.2s; animation: fadeIn 0.4s ease forwards; opacity: 0;
+    }
+    .stat-card:nth-child(1) { animation-delay: 0.05s; }
+    .stat-card:nth-child(2) { animation-delay: 0.1s; }
+    .stat-card:nth-child(3) { animation-delay: 0.15s; }
+    .stat-card:nth-child(4) { animation-delay: 0.2s; }
+    .stat-card:hover { border-color: var(--border-hover); }
+    .stat-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .stat-value { font-size: 26px; font-weight: 700; letter-spacing: -1px; }
+    .stat-sub { font-size: 12px; color: var(--text-sec); margin-top: 4px; min-height: 16px; }
+
+    /* Grids */
+    .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .bottom-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+    /* Card */
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+      overflow: hidden; animation: fadeIn 0.4s ease forwards; opacity: 0;
+    }
+    .card:nth-child(1) { animation-delay: 0.05s; }
+    .card:nth-child(2) { animation-delay: 0.1s; }
+    .card:nth-child(3) { animation-delay: 0.15s; }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+    }
+    .card-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-sec); }
+    .card-count { font-size: 12px; color: var(--text-muted); }
+    .card-body { padding: 16px 20px; max-height: 420px; overflow-y: auto; }
+    .card-body::-webkit-scrollbar { width: 4px; }
+    .card-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* Token row */
+    .token-row {
+      display: flex; align-items: center; gap: 12px; padding: 10px 0;
+      border-bottom: 1px solid rgba(35,35,42,0.5);
+    }
+    .token-row:last-child { border-bottom: none; }
+    .token-icon {
+      width: 36px; height: 36px; border-radius: 50%; background: var(--border);
+      display: flex; align-items: center; justify-content: center; font-size: 13px;
+      font-weight: 600; flex-shrink: 0; overflow: hidden;
+    }
+    .token-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .token-info { flex: 1; min-width: 0; }
+    .token-name { font-size: 14px; font-weight: 600; }
+    .token-balance { font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    .token-value { text-align: right; }
+    .token-usd { font-size: 14px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+    .token-change { font-size: 11px; margin-top: 2px; }
+    .token-pct-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 4px; min-width: 80px; }
+    .token-pct-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.5s ease; }
+
+    /* Activity row */
+    .activity-row {
+      display: flex; align-items: flex-start; gap: 12px; padding: 12px 0;
+      border-bottom: 1px solid rgba(35,35,42,0.5);
+    }
+    .activity-row:last-child { border-bottom: none; }
+    .activity-icon {
+      width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-size: 15px; flex-shrink: 0;
+    }
+    .activity-info { flex: 1; min-width: 0; }
+    .activity-summary { font-size: 13px; font-weight: 500; line-height: 1.4; }
+    .activity-meta { font-size: 11px; color: var(--text-muted); margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .activity-value { font-size: 13px; font-weight: 600; font-family: 'JetBrains Mono', monospace; text-align: right; flex-shrink: 0; }
+
+    /* NFT row */
+    .nft-row {
+      display: flex; align-items: center; gap: 12px; padding: 10px 0;
+      border-bottom: 1px solid rgba(35,35,42,0.5);
+    }
+    .nft-row:last-child { border-bottom: none; }
+    .nft-thumb {
+      width: 42px; height: 42px; border-radius: var(--radius-sm); background: var(--border);
+      overflow: hidden; flex-shrink: 0; display: flex; align-items: center;
+      justify-content: center; font-size: 18px;
+    }
+    .nft-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .nft-name { font-size: 14px; font-weight: 600; }
+    .nft-detail { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* PnL */
+    .pnl-big { font-size: 32px; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 16px; }
+    .pnl-row {
+      display: flex; justify-content: space-between; padding: 8px 0;
+      border-bottom: 1px solid rgba(35,35,42,0.5);
+    }
+    .pnl-row:last-child { border-bottom: none; }
+    .pnl-label { font-size: 13px; color: var(--text-sec); }
+    .pnl-val { font-size: 13px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+
+    /* Approval */
+    .approval-row {
+      display: flex; align-items: center; gap: 12px; padding: 10px 0;
+      border-bottom: 1px solid rgba(35,35,42,0.5);
+    }
+    .approval-row:last-child { border-bottom: none; }
+    .approval-token { font-size: 13px; font-weight: 600; flex: 1; }
+    .approval-spender { font-size: 12px; color: var(--text-sec); flex: 1; }
+    .approval-risk { font-size: 12px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+    .risk-high { color: var(--red); }
+    .risk-med { color: var(--orange); }
+    .risk-low { color: var(--green); }
+
+    /* States */
+    .loading { display: flex; align-items: center; justify-content: center; padding: 40px; }
+    .spinner {
+      width: 24px; height: 24px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 13px; }
+    .error-state { text-align: center; padding: 40px 20px; color: var(--red); font-size: 13px; }
+
+    .positive { color: var(--green); }
+    .negative { color: var(--red); }
+    .hidden { display: none !important; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 1024px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .main-grid, .bottom-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .header { flex-wrap: wrap; }
+      .search-wrap { min-width: 100%; order: 3; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .hero h2 { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo"><span>&#x1f40b;</span><h1>Whale Tracker</h1></div>
+    <div class="search-wrap">
+      <input type="text" id="addressInput" placeholder="Enter wallet address or ENS name..." spellcheck="false" autocomplete="off">
+      <button class="btn" id="trackBtn" onclick="trackWhale()">Track</button>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <div id="hero" class="hero">
+    <h2>Track any <em>whale</em></h2>
+    <p>Enter any Ethereum address to get a full intelligence report &mdash; net worth, holdings, DeFi positions, P&amp;L, and more.</p>
+    <div class="quick-whales">
+      <button class="whale-btn" onclick="quickTrack('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')">vitalik.eth</button>
+      <button class="whale-btn" onclick="quickTrack('0x28C6c06298d514Db089934071355E5743bf21d60')">Binance 14</button>
+      <button class="whale-btn" onclick="quickTrack('0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503')">Binance: CZ</button>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" class="dashboard">
+    <div class="identity" id="identityCard">
+      <div class="identity-avatar" id="idAvatar">?</div>
+      <div class="identity-info">
+        <div class="identity-name" id="idName">Loading...</div>
+        <div class="identity-addr" id="idAddr" onclick="copyAddress()">...</div>
+        <div class="chain-badges" id="idChains"></div>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Net Worth</div>
+        <div class="stat-value" id="statNetWorth">...</div>
+        <div class="stat-sub" id="statNetWorthSub"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Transactions</div>
+        <div class="stat-value" id="statTxCount">...</div>
+        <div class="stat-sub" id="statTxSub"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active Chains</div>
+        <div class="stat-value" id="statChains">...</div>
+        <div class="stat-sub" id="statChainsSub"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">DeFi Value</div>
+        <div class="stat-value" id="statDefi">...</div>
+        <div class="stat-sub" id="statDefiSub"></div>
+      </div>
+    </div>
+
+    <div class="main-grid">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Token Holdings</span><span class="card-count" id="tokenCount"></span></div>
+        <div class="card-body" id="tokenList"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Recent Activity</span><span class="card-count" id="activityCount"></span></div>
+        <div class="card-body" id="activityList"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <div class="bottom-grid">
+      <div class="card">
+        <div class="card-header"><span class="card-title">NFT Collections</span><span class="card-count" id="nftCount"></span></div>
+        <div class="card-body" id="nftList"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Profit &amp; Loss</span></div>
+        <div class="card-body" id="pnlCard"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Approval Risk</span><span class="card-count" id="approvalCount"></span></div>
+        <div class="card-body" id="approvalList"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// All API calls go through our local server proxy — no key needed in the browser
+const BASE = '/api/v2.2';
+let currentAddress = '';
+
+const CHAINS = {
+  eth: { name: 'Ethereum', color: '#627EEA' }, polygon: { name: 'Polygon', color: '#8247E5' },
+  bsc: { name: 'BSC', color: '#F0B90B' }, arbitrum: { name: 'Arbitrum', color: '#28A0F0' },
+  base: { name: 'Base', color: '#0052FF' }, optimism: { name: 'Optimism', color: '#FF0420' },
+  avalanche: { name: 'Avalanche', color: '#E84142' }, fantom: { name: 'Fantom', color: '#1969FF' },
+  cronos: { name: 'Cronos', color: '#002D74' }, gnosis: { name: 'Gnosis', color: '#04795B' },
+  linea: { name: 'Linea', color: '#61DFFF' }, moonbeam: { name: 'Moonbeam', color: '#53CBC8' },
+  moonriver: { name: 'Moonriver', color: '#F2B705' }, pulse: { name: 'Pulse', color: '#9B59B6' },
+};
+
+const CAT_ICONS = {
+  send: '&#x2197;', receive: '&#x2199;', 'token send': '&#x2197;', 'token receive': '&#x2199;',
+  'nft send': '&#x1f5bc;', 'nft receive': '&#x1f5bc;', 'token swap': '&#x1f504;',
+  'nft purchase': '&#x1f6d2;', 'nft sale': '&#x1f4b0;', approve: '&#x2714;',
+  airdrop: '&#x1f381;', mint: '&#x2728;', burn: '&#x1f525;', deposit: '&#x1f4e5;',
+  withdraw: '&#x1f4e4;', 'contract interaction': '&#x1f4dc;',
+};
+
+const CAT_COLORS = {
+  send: 'var(--red-dim)', receive: 'var(--green-dim)', 'token send': 'var(--red-dim)',
+  'token receive': 'var(--green-dim)', 'token swap': 'var(--accent-dim)',
+  'nft purchase': 'var(--accent-dim)', approve: 'rgba(251,146,60,0.12)',
+};
+
+// ---- Helpers ----
+async function api(path, params = {}) {
+  const url = new URL(BASE + path, window.location.origin);
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
+  });
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${res.status}`);
+  return res.json();
+}
+
+function $(id) { return document.getElementById(id); }
+
+function formatUSD(n) {
+  const num = typeof n === 'string' ? parseFloat(n) : n;
+  if (isNaN(num) || num === 0) return '$0';
+  const abs = Math.abs(num), sign = num < 0 ? '-' : '';
+  if (abs >= 1e9) return sign + '$' + (abs / 1e9).toFixed(2) + 'B';
+  if (abs >= 1e6) return sign + '$' + (abs / 1e6).toFixed(2) + 'M';
+  if (abs >= 1e3) return sign + '$' + (abs / 1e3).toFixed(1) + 'K';
+  if (abs >= 1) return sign + '$' + abs.toFixed(2);
+  return sign + '$' + abs.toFixed(4);
+}
+
+function fmtNum(n) {
+  const num = typeof n === 'string' ? parseFloat(n) : n;
+  if (isNaN(num)) return '0';
+  return num.toLocaleString('en-US', { maximumFractionDigits: 4 });
+}
+
+function fmtBig(n) {
+  const num = typeof n === 'string' ? parseFloat(n) : n;
+  if (isNaN(num)) return '0';
+  if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
+  if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+  if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+  return num.toLocaleString('en-US');
+}
+
+function trunc(addr) { return addr ? addr.slice(0, 6) + '...' + addr.slice(-4) : ''; }
+
+function timeAgo(iso) {
+  const ms = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  const d = Math.floor(h / 24);
+  if (d < 30) return d + 'd ago';
+  return Math.floor(d / 30) + 'mo ago';
+}
+
+function pctCls(v) { const n = parseFloat(v); return isNaN(n) || n === 0 ? '' : n > 0 ? 'positive' : 'negative'; }
+function pctFmt(v) { const n = parseFloat(v); return isNaN(n) ? '0%' : (n > 0 ? '+' : '') + n.toFixed(2) + '%'; }
+
+function showLoading(el) { el.innerHTML = '<div class="loading"><div class="spinner"></div></div>'; }
+function showEmpty(el, msg) { el.innerHTML = '<div class="empty-state">' + (msg || 'No data') + '</div>'; }
+function showError(el, msg) { el.innerHTML = '<div class="error-state">' + (msg || 'Failed to load') + '</div>'; }
+
+function tokenImg(logo, sym) {
+  const letter = (sym || '?')[0];
+  if (logo) return '<div class="token-icon"><img src="' + logo + '" onerror="this.parentElement.textContent=\'' + letter + '\'"></div>';
+  return '<div class="token-icon">' + letter + '</div>';
+}
+
+function copyAddress() {
+  navigator.clipboard.writeText(currentAddress);
+  const el = $('idAddr');
+  const orig = el.textContent;
+  el.textContent = 'Copied!';
+  setTimeout(() => { el.textContent = orig; }, 1200);
+}
+
+// ---- Section loaders ----
+async function loadIdentity(address) {
+  $('idAddr').textContent = trunc(address);
+  try {
+    const d = await api('/resolve/' + address + '/reverse');
+    $('idName').textContent = d.name || trunc(address);
+    $('idAvatar').textContent = d.name ? d.name[0].toUpperCase() : address.slice(2, 4).toUpperCase();
+  } catch {
+    $('idName').textContent = trunc(address);
+    $('idAvatar').textContent = address.slice(2, 4).toUpperCase();
+  }
+}
+
+async function loadChains(address) {
+  try {
+    const d = await api('/wallets/' + address + '/chains');
+    const chains = d.active_chains || [];
+    $('statChains').textContent = chains.length;
+    $('statChainsSub').textContent = 'networks';
+    $('idChains').innerHTML = chains.map(c => {
+      const cfg = CHAINS[c.chain] || { name: c.chain, color: '#666' };
+      return '<span class="chain-badge" style="background:' + cfg.color + '22;color:' + cfg.color + ';border:1px solid ' + cfg.color + '44">' + cfg.name + '</span>';
+    }).join('');
+  } catch { $('statChains').textContent = '-'; }
+}
+
+async function loadNetWorth(address) {
+  try {
+    const d = await api('/wallets/' + address + '/net-worth', { exclude_spam: true, exclude_unverified_contracts: true });
+    $('statNetWorth').textContent = formatUSD(d.total_networth_usd);
+    $('statNetWorthSub').textContent = (d.chains || [])
+      .filter(c => parseFloat(c.networth_usd) > 0)
+      .sort((a, b) => parseFloat(b.networth_usd) - parseFloat(a.networth_usd))
+      .slice(0, 3)
+      .map(c => ((CHAINS[c.chain] || {}).name || c.chain) + ': ' + formatUSD(c.networth_usd))
+      .join(' | ');
+  } catch { $('statNetWorth').textContent = '-'; }
+}
+
+async function loadStats(address) {
+  try {
+    const d = await api('/wallets/' + address + '/stats', { chain: 'eth' });
+    $('statTxCount').textContent = fmtBig(parseInt(d.transactions?.total || '0', 10));
+    $('statTxSub').textContent = fmtBig(parseInt(d.token_transfers?.total || '0', 10)) + ' token transfers';
+  } catch { $('statTxCount').textContent = '-'; }
+}
+
+async function loadDefi(address) {
+  try {
+    const d = await api('/wallets/' + address + '/defi/summary', { chain: 'eth' });
+    $('statDefi').textContent = formatUSD(d.total_usd_value);
+    const p = parseInt(d.active_protocols || '0', 10);
+    const u = parseFloat(d.total_unclaimed_usd_value || '0');
+    $('statDefiSub').textContent = p + ' protocols' + (u > 0 ? ' | ' + formatUSD(u) + ' unclaimed' : '');
+  } catch {
+    $('statDefi').textContent = '$0';
+    $('statDefiSub').textContent = 'No DeFi positions';
+  }
+}
+
+async function loadTokens(address) {
+  const el = $('tokenList');
+  try {
+    const d = await api('/wallets/' + address + '/tokens', { chain: 'eth', exclude_spam: true, limit: 20 });
+    const tokens = (d.result || []).filter(t => parseFloat(t.usd_value || 0) > 0.01)
+      .sort((a, b) => (parseFloat(b.usd_value) || 0) - (parseFloat(a.usd_value) || 0));
+    $('tokenCount').textContent = tokens.length + ' tokens';
+    if (!tokens.length) { showEmpty(el, 'No tokens found'); return; }
+    el.innerHTML = tokens.map(t => {
+      const pct = parseFloat(t.portfolio_percentage) || 0;
+      const chg = parseFloat(t.usd_price_24hr_percent_change) || 0;
+      return '<div class="token-row">' +
+        tokenImg(t.logo || t.thumbnail, t.symbol) +
+        '<div class="token-info"><div class="token-name">' + (t.symbol || '???') + '</div>' +
+        '<div class="token-balance">' + fmtNum(t.balance_formatted) + ' ' + (t.symbol || '') + '</div></div>' +
+        '<div style="flex:1"><div class="token-pct-bar"><div class="token-pct-fill" style="width:' + Math.min(pct, 100) + '%"></div></div>' +
+        '<div style="font-size:11px;color:var(--text-muted);margin-top:3px">' + pct.toFixed(1) + '%</div></div>' +
+        '<div class="token-value"><div class="token-usd">' + formatUSD(t.usd_value) + '</div>' +
+        '<div class="token-change ' + pctCls(chg) + '">' + pctFmt(chg) + '</div></div></div>';
+    }).join('');
+  } catch { showError(el, 'Failed to load tokens'); }
+}
+
+async function loadActivity(address) {
+  const el = $('activityList');
+  try {
+    const d = await api('/wallets/' + address + '/history', { chain: 'eth', limit: 15, order: 'DESC' });
+    const txs = d.result || [];
+    $('activityCount').textContent = 'latest';
+    if (!txs.length) { showEmpty(el, 'No recent activity'); return; }
+    el.innerHTML = txs.map(tx => {
+      const cat = (tx.category || 'contract interaction').toLowerCase();
+      const icon = CAT_ICONS[cat] || '&#x1f4dc;';
+      const bg = CAT_COLORS[cat] || 'rgba(99,99,110,0.1)';
+      const summary = tx.summary || tx.method_label || cat;
+      const val = tx.value && tx.value !== '0' ? fmtNum(parseFloat(tx.value) / 1e18) + ' ETH' : '';
+      const from = tx.from_address_label || tx.from_address_entity || trunc(tx.from_address);
+      const to = tx.to_address_label || tx.to_address_entity || trunc(tx.to_address);
+      return '<div class="activity-row">' +
+        '<div class="activity-icon" style="background:' + bg + '">' + icon + '</div>' +
+        '<div class="activity-info"><div class="activity-summary">' + summary + '</div>' +
+        '<div class="activity-meta"><span>' + from + ' &rarr; ' + to + '</span><span>' + timeAgo(tx.block_timestamp) + '</span></div></div>' +
+        (val ? '<div class="activity-value">' + val + '</div>' : '') + '</div>';
+    }).join('');
+  } catch { showError(el, 'Failed to load activity'); }
+}
+
+async function loadNFTs(address) {
+  const el = $('nftList');
+  try {
+    const d = await api('/' + address + '/nft/collections', { chain: 'eth', exclude_spam: true, limit: 10, token_counts: true });
+    const cols = d.result || [];
+    $('nftCount').textContent = cols.length + ' collections';
+    if (!cols.length) { showEmpty(el, 'No NFTs found'); return; }
+    el.innerHTML = cols.map(c => {
+      const logo = c.collection_logo;
+      const thumb = logo ? '<img src="' + logo + '" onerror="this.parentElement.innerHTML=\'&#x1f5bc;\'">' : '&#x1f5bc;';
+      return '<div class="nft-row"><div class="nft-thumb">' + thumb + '</div>' +
+        '<div style="flex:1;min-width:0"><div class="nft-name">' + (c.name || 'Unknown') + '</div>' +
+        '<div class="nft-detail">' + (c.count || '?') + ' items &middot; Floor: ' + (c.floor_price_usd ? formatUSD(c.floor_price_usd) : '-') + '</div></div>' +
+        '<span class="chain-badge" style="background:#627EEA22;color:#627EEA;border:1px solid #627EEA44;font-size:10px">' + (c.contract_type || 'NFT') + '</span></div>';
+    }).join('');
+  } catch { showError(el, 'Failed to load NFTs'); }
+}
+
+async function loadPnL(address) {
+  const el = $('pnlCard');
+  try {
+    const d = await api('/wallets/' + address + '/profitability/summary', { chain: 'eth', days: 'all' });
+    const profit = parseFloat(d.total_realized_profit_usd || '0');
+    const profitPct = parseFloat(d.total_realized_profit_percentage || '0');
+    const trades = parseInt(d.total_count_of_trades || '0', 10);
+    const buys = parseInt(d.total_buys || '0', 10);
+    const sells = parseInt(d.total_sells || '0', 10);
+    el.innerHTML =
+      '<div class="pnl-big ' + (profit >= 0 ? 'positive' : 'negative') + '">' + (profit >= 0 ? '+' : '') + formatUSD(profit) + '</div>' +
+      '<div class="pnl-row"><span class="pnl-label">Realized P&L %</span><span class="pnl-val ' + pctCls(profitPct) + '">' + pctFmt(profitPct) + '</span></div>' +
+      '<div class="pnl-row"><span class="pnl-label">Total Trades</span><span class="pnl-val">' + fmtBig(trades) + '</span></div>' +
+      '<div class="pnl-row"><span class="pnl-label">Buys / Sells</span><span class="pnl-val">' + fmtBig(buys) + ' / ' + fmtBig(sells) + '</span></div>' +
+      '<div class="pnl-row"><span class="pnl-label">Buy Volume</span><span class="pnl-val">' + formatUSD(d.total_bought_volume_usd) + '</span></div>' +
+      '<div class="pnl-row"><span class="pnl-label">Sell Volume</span><span class="pnl-val">' + formatUSD(d.total_sold_volume_usd) + '</span></div>';
+  } catch { showError(el, 'Failed to load P&L'); }
+}
+
+async function loadApprovals(address) {
+  const el = $('approvalList');
+  try {
+    const d = await api('/wallets/' + address + '/approvals', { chain: 'eth', limit: 20 });
+    const approvals = d.result || [];
+    $('approvalCount').textContent = approvals.length + ' active';
+    if (!approvals.length) { showEmpty(el, 'No active approvals'); return; }
+    const totalRisk = approvals.reduce((s, a) => s + parseFloat(a.token?.usd_at_risk || '0'), 0);
+    const unlimited = approvals.filter(a => a.value_formatted === 'unlimited' || parseFloat(a.value_formatted || '0') > 1e15).length;
+    let html = '<div style="margin-bottom:12px;padding:12px;background:' + (unlimited > 0 ? 'var(--red-dim)' : 'var(--green-dim)') +
+      ';border-radius:var(--radius-sm)"><div style="font-size:13px;font-weight:600;color:' + (unlimited > 0 ? 'var(--red)' : 'var(--green)') + '">' +
+      (unlimited > 0 ? '&#x26a0; ' + unlimited + ' unlimited approval' + (unlimited > 1 ? 's' : '') : '&#x2713; No unlimited approvals') +
+      '</div><div style="font-size:12px;color:var(--text-sec);margin-top:4px">Total USD at risk: ' + formatUSD(totalRisk) + '</div></div>';
+    html += approvals.slice(0, 10).map(a => {
+      const tok = a.token || {};
+      const risk = parseFloat(tok.usd_at_risk || '0');
+      const cls = risk > 10000 ? 'risk-high' : risk > 1000 ? 'risk-med' : 'risk-low';
+      const spender = a.spender?.entity || a.spender?.address_label || trunc(a.spender?.address);
+      return '<div class="approval-row"><span class="approval-token">' + (tok.symbol || '???') +
+        '</span><span class="approval-spender">' + spender +
+        '</span><span class="approval-risk ' + cls + '">' + formatUSD(risk) + '</span></div>';
+    }).join('');
+    el.innerHTML = html;
+  } catch { showError(el, 'Failed to load approvals'); }
+}
+
+// ---- Main ----
+async function trackWhale(addr) {
+  const address = addr || $('addressInput').value.trim();
+  if (!address) return;
+
+  currentAddress = address;
+  $('addressInput').value = address;
+  $('hero').classList.add('hidden');
+  $('dashboard').classList.add('active');
+  $('trackBtn').disabled = true;
+
+  // Reset
+  ['tokenList', 'activityList', 'nftList', 'pnlCard', 'approvalList'].forEach(id => showLoading($(id)));
+  ['statNetWorth', 'statTxCount', 'statChains', 'statDefi'].forEach(id => $(id).textContent = '...');
+  ['statNetWorthSub', 'statTxSub', 'statChainsSub', 'statDefiSub'].forEach(id => $(id).textContent = '');
+  $('idName').textContent = 'Loading...';
+  $('idChains').innerHTML = '';
+
+  await Promise.allSettled([
+    loadIdentity(address), loadChains(address), loadNetWorth(address),
+    loadStats(address), loadDefi(address), loadTokens(address),
+    loadActivity(address), loadNFTs(address), loadPnL(address), loadApprovals(address),
+  ]);
+
+  $('trackBtn').disabled = false;
+}
+
+function quickTrack(addr) {
+  $('addressInput').value = addr;
+  trackWhale(addr);
+}
+
+// Enter key
+$('addressInput').addEventListener('keydown', e => { if (e.key === 'Enter') trackWhale(); });
+</script>
+</body>
+</html>
